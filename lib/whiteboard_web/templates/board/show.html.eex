@@ -1,5 +1,8 @@
 <h2 class="board-name"><%= @board.name %></h2>
 
+<div id="elm-main"></div>
+
 <button id="test-button">Test Button</button>
 
 <script>window.boardId = "<%= assigns[:board].id %>";</script>
+<script type="text/javascript" src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
