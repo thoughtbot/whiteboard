@@ -1,9 +1,9 @@
 defmodule Whiteboard do
-  @moduledoc """
-  Whiteboard keeps the contexts that define your domain
-  and business logic.
+  alias Whiteboard.{Board, Repo}
 
-  Contexts are also responsible for managing your data, regardless
-  if it comes from the database, an external API or others.
-  """
+  def create_board(name) do
+    %Board{}
+    |> Board.changeset(%{"name" => name})
+    |> Repo.insert()
+  end
 end
