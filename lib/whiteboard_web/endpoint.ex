@@ -1,6 +1,10 @@
 defmodule WhiteboardWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :whiteboard
 
+  if Application.get_env(:whiteboard, :sql_sandbox) do
+    plug Phoenix.Ecto.SQL.Sandbox
+  end
+
   socket "/socket", WhiteboardWeb.UserSocket,
     websocket: true,
     longpoll: false

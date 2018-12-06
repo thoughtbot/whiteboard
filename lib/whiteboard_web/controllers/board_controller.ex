@@ -6,4 +6,16 @@ defmodule WhiteboardWeb.BoardController do
 
     render(conn, "show.html", board: board)
   end
+
+  def create(conn, %{"name" => name}) do
+    case Whiteboard.create_board(name) do
+      {:ok, board} ->
+        redirect(conn, to: Routes.board_path(conn, :show, board))
+
+      {:error, _changeset} ->
+        conn
+        |> put_view(Whiteboard.PageView)
+        |> render("index.html")
+    end
+  end
 end
