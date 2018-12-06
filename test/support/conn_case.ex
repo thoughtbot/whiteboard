@@ -23,6 +23,7 @@ defmodule WhiteboardWeb.ConnCase do
 
       # The default endpoint for testing
       @endpoint WhiteboardWeb.Endpoint
+      import Whiteboard.Factory
     end
   end
 
