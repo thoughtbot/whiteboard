@@ -1,1 +1,5 @@
 <h2 class="board-name"><%= @board.name %></h2>
+
+<button id="test-button">Test Button</button>
+
+<script>window.boardId = "<%= assigns[:board].id %>";</script>
