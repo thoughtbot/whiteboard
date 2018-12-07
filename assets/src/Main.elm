@@ -7,9 +7,11 @@ import Html.Attributes exposing (style)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
+import Random
 import Svg exposing (Svg, polyline)
 import Svg.Attributes exposing (fill, points, stroke)
 import Time
+import Uuid exposing (Uuid)
 
 
 type alias Point =
@@ -17,7 +19,7 @@ type alias Point =
 
 
 type alias Path =
-    { id : Int
+    { id : Uuid
     , points : List Point
     }
 
@@ -61,14 +63,14 @@ svgPathString path =
     String.join " " (List.map svgPoint path.points)
 
 
-startRecording : Model -> Model
-startRecording model =
+startRecording : Uuid -> Model -> Model
+startRecording uuid model =
     case model of
         Recording _ _ ->
             model
 
         Stable paths ->
-            Recording { id = nextId paths, points = [] } paths
+            Recording { id = uuid, points = [] } paths
 
 
 addForeignPath : Path -> Model -> Model
@@ -79,15 +81,6 @@ addForeignPath path model =
 
         Stable paths ->
             Stable (path :: paths)
-
-
-nextId : List Path -> Int
-nextId paths =
-    paths
-        |> List.map .id
-        |> List.maximum
-        |> Maybe.withDefault 0
-        |> (+) 1
 
 
 stopRecording : Model -> Model
@@ -114,7 +107,10 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         DrawStarted ->
-            ( startRecording model, Cmd.none )
+            ( model, Random.generate UuuidCreated Uuid.uuidGenerator )
+
+        UuuidCreated uuid ->
+            ( startRecording uuid model, Cmd.none )
 
         DrawEnded ->
             ( stopRecording model, sendBuildingPoints model )
@@ -195,6 +191,7 @@ type Msg
     | PointAdded Point
     | NetworkClockTick
     | RemotePathReceived (Result Decode.Error Path)
+    | UuuidCreated Uuid
 
 
 port sendPoints : Decode.Value -> Cmd a
@@ -206,7 +203,7 @@ port incomingPaths : (Decode.Value -> a) -> Sub a
 encodePath : Path -> Decode.Value
 encodePath path =
     Encode.object
-        [ ( "id", Encode.int path.id )
+        [ ( "id", Uuid.encode path.id )
         , ( "points", Encode.list encodePoint path.points )
         ]
 
@@ -222,7 +219,7 @@ encodePoint ( x, y ) =
 pathDecoder : Decoder Path
 pathDecoder =
     Decode.map2 (\id points -> { id = id, points = points })
-        (Decode.field "id" Decode.int)
+        (Decode.field "id" Uuid.decoder)
         (Decode.field "points" (Decode.list pointDecoder))
 
 
