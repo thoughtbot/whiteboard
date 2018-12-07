@@ -71,6 +71,16 @@ startRecording model =
             Recording { id = nextId paths, points = [] } paths
 
 
+addForeignPath : Path -> Model -> Model
+addForeignPath path model =
+    case model of
+        Recording current paths ->
+            Recording current (path :: paths)
+
+        Stable paths ->
+            Stable (path :: paths)
+
+
 nextId : List Path -> Int
 nextId paths =
     paths
@@ -115,6 +125,12 @@ update msg model =
         NetworkClockTick ->
             ( model, sendBuildingPoints model )
 
+        RemotePathReceived (Ok path) ->
+            ( addForeignPath path model, Cmd.none )
+
+        RemotePathReceived (Err _) ->
+            ( model, Cmd.none )
+
 
 sendBuildingPoints : Model -> Cmd a
 sendBuildingPoints model =
@@ -156,10 +172,14 @@ subscriptions model =
                 [ Browser.Events.onMouseUp (Decode.succeed DrawEnded)
                 , Sub.map PointAdded (Browser.Events.onMouseMove mousePositionDecoder)
                 , Time.every 50 (\_ -> NetworkClockTick)
+                , incomingPaths (RemotePathReceived << Decode.decodeValue pathDecoder)
                 ]
 
         Stable _ ->
-            Browser.Events.onMouseDown (Decode.succeed DrawStarted)
+            Sub.batch
+                [ Browser.Events.onMouseDown (Decode.succeed DrawStarted)
+                , incomingPaths (RemotePathReceived << Decode.decodeValue pathDecoder)
+                ]
 
 
 mousePositionDecoder : Decoder Point
@@ -174,9 +194,13 @@ type Msg
     | DrawEnded
     | PointAdded Point
     | NetworkClockTick
+    | RemotePathReceived (Result Decode.Error Path)
 
 
 port sendPoints : Decode.Value -> Cmd a
+
+
+port incomingPaths : (Decode.Value -> a) -> Sub a
 
 
 encodePath : Path -> Decode.Value
@@ -193,6 +217,20 @@ encodePoint ( x, y ) =
         [ ( "x", Encode.int x )
         , ( "y", Encode.int y )
         ]
+
+
+pathDecoder : Decoder Path
+pathDecoder =
+    Decode.map2 (\id points -> { id = id, points = points })
+        (Decode.field "id" Decode.int)
+        (Decode.field "points" (Decode.list pointDecoder))
+
+
+pointDecoder : Decoder Point
+pointDecoder =
+    Decode.map2 Tuple.pair
+        (Decode.field "x" Decode.int)
+        (Decode.field "y" Decode.int)
 
 
 main : Program Flags Model Msg

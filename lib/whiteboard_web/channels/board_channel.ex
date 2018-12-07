@@ -5,8 +5,8 @@ defmodule WhiteboardWeb.BoardChannel do
     {:ok, assign(socket, :board_id, board_id)}
   end
 
-  def handle_in("new_event", %{"body" => body}, socket) do
-    broadcast_from!(socket, "new_event", %{"body" => body})
+  def handle_in("new_event", payload, socket) do
+    broadcast_from!(socket, "new_event", payload)
     {:noreply, socket}
   end
 end
