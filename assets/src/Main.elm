@@ -1,21 +1,23 @@
 port module Main exposing (main)
 
 import Browser
+import Browser.Dom
 import Browser.Events
 import Html exposing (..)
-import Html.Attributes exposing (style)
-import Html.Events exposing (onClick)
+import Html.Attributes exposing (id, style)
+import Html.Events exposing (onClick, onMouseDown)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Random
 import Svg exposing (Svg, polyline)
 import Svg.Attributes exposing (fill, points, stroke)
+import Task
 import Time
 import Uuid exposing (Uuid)
 
 
 type alias Point =
-    ( Int, Int )
+    ( Float, Float )
 
 
 type alias Path =
@@ -24,38 +26,53 @@ type alias Path =
     }
 
 
+type alias State =
+    { existing : List Path
+    , svgElement : Browser.Dom.Element
+    }
+
+
 type Model
-    = Recording Path (List Path)
-    | Stable (List Path)
+    = Loading
+    | Recording Path State
+    | Stable State
 
 
 toList : Model -> List Path
 toList model =
     case model of
-        Recording head tail ->
-            head :: tail
+        Loading ->
+            []
 
-        Stable list ->
-            list
+        Recording head state ->
+            head :: state.existing
+
+        Stable state ->
+            state.existing
 
 
 type alias Flags =
     ()
 
 
-initialPaths : List Path
-initialPaths =
-    []
+drawingSurface : String
+drawingSurface =
+    "drawing-surface"
 
 
 initialize : Flags -> ( Model, Cmd Msg )
 initialize flags =
-    ( Stable initialPaths, Cmd.none )
+    ( Loading, fetchSvgCoords )
+
+
+fetchSvgCoords : Cmd Msg
+fetchSvgCoords =
+    Task.attempt ReceiveSvgCoords <| Browser.Dom.getElement drawingSurface
 
 
 svgPoint : Point -> String
 svgPoint ( x, y ) =
-    String.fromInt x ++ "," ++ String.fromInt y
+    String.fromFloat x ++ "," ++ String.fromFloat y
 
 
 svgPathString : Path -> String
@@ -66,6 +83,9 @@ svgPathString path =
 startRecording : Uuid -> Model -> Model
 startRecording uuid model =
     case model of
+        Loading ->
+            model
+
         Recording _ _ ->
             model
 
@@ -76,18 +96,29 @@ startRecording uuid model =
 addForeignPath : Path -> Model -> Model
 addForeignPath path model =
     case model of
-        Recording current paths ->
-            Recording current (path :: paths)
+        Loading ->
+            model
 
-        Stable paths ->
-            Stable (path :: paths)
+        Recording current state ->
+            Recording current (addPath path state)
+
+        Stable state ->
+            Stable (addPath path state)
+
+
+addPath : Path -> State -> State
+addPath path state =
+    { state | existing = path :: state.existing }
 
 
 stopRecording : Model -> Model
 stopRecording model =
     case model of
-        Recording _ _ ->
-            Stable (toList model)
+        Loading ->
+            model
+
+        Recording _ state ->
+            Stable { state | existing = toList model }
 
         Stable _ ->
             model
@@ -96,16 +127,43 @@ stopRecording model =
 addPoint : Point -> Model -> Model
 addPoint point model =
     case model of
+        Loading ->
+            model
+
         Recording current rest ->
-            Recording { current | points = point :: current.points } rest
+            Recording { current | points = offsetPoint rest.svgElement point :: current.points } rest
 
         Stable _ ->
             model
 
 
+offsetPoint : Browser.Dom.Element -> Point -> Point
+offsetPoint { element, viewport } ( x, y ) =
+    ( x - element.x + viewport.x, y - element.y + viewport.y )
+
+
+addCoords : Browser.Dom.Element -> Model -> Model
+addCoords element model =
+    case model of
+        Loading ->
+            Stable { svgElement = element, existing = [] }
+
+        Recording current state ->
+            Recording current { state | svgElement = element }
+
+        Stable state ->
+            Stable { state | svgElement = element }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        ReceiveSvgCoords (Err _) ->
+            ( model, Cmd.none )
+
+        ReceiveSvgCoords (Ok element) ->
+            ( addCoords element model, Cmd.none )
+
         DrawStarted ->
             ( model, Random.generate UuuidCreated Uuid.uuidGenerator )
 
@@ -127,6 +185,12 @@ update msg model =
         RemotePathReceived (Err _) ->
             ( model, Cmd.none )
 
+        UserScrolled ->
+            ( model, fetchSvgCoords )
+
+        WindowResized ->
+            ( model, fetchSvgCoords )
+
 
 sendBuildingPoints : Model -> Cmd a
 sendBuildingPoints model =
@@ -138,6 +202,9 @@ sendBuildingPoints model =
 buildingPoints : Model -> Maybe Path
 buildingPoints model =
     case model of
+        Loading ->
+            Nothing
+
         Recording current _ ->
             Just current
 
@@ -156,6 +223,8 @@ view model =
         [ style "position" "absolute"
         , style "width" "100%"
         , style "height" "100%"
+        , onMouseDown DrawStarted
+        , id drawingSurface
         ]
         (List.map viewPath <| toList model)
 
@@ -163,26 +232,33 @@ view model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
+        Loading ->
+            Sub.none
+
         Recording _ _ ->
             Sub.batch
                 [ Browser.Events.onMouseUp (Decode.succeed DrawEnded)
                 , Sub.map PointAdded (Browser.Events.onMouseMove mousePositionDecoder)
                 , Time.every 50 (\_ -> NetworkClockTick)
                 , incomingPaths (RemotePathReceived << Decode.decodeValue pathDecoder)
+                , scrollEvents (always UserScrolled)
+                , Browser.Events.onResize (\_ _ -> WindowResized)
                 ]
 
         Stable _ ->
             Sub.batch
                 [ Browser.Events.onMouseDown (Decode.succeed DrawStarted)
                 , incomingPaths (RemotePathReceived << Decode.decodeValue pathDecoder)
+                , scrollEvents (always UserScrolled)
+                , Browser.Events.onResize (\_ _ -> WindowResized)
                 ]
 
 
 mousePositionDecoder : Decoder Point
 mousePositionDecoder =
     Decode.map2 Tuple.pair
-        (Decode.field "clientX" Decode.int)
-        (Decode.field "clientY" Decode.int)
+        (Decode.field "clientX" Decode.float)
+        (Decode.field "clientY" Decode.float)
 
 
 type Msg
@@ -192,12 +268,18 @@ type Msg
     | NetworkClockTick
     | RemotePathReceived (Result Decode.Error Path)
     | UuuidCreated Uuid
+    | ReceiveSvgCoords (Result Browser.Dom.Error Browser.Dom.Element)
+    | UserScrolled
+    | WindowResized
 
 
 port sendPoints : Decode.Value -> Cmd a
 
 
 port incomingPaths : (Decode.Value -> a) -> Sub a
+
+
+port scrollEvents : (Decode.Value -> a) -> Sub a
 
 
 encodePath : Path -> Decode.Value
@@ -211,8 +293,8 @@ encodePath path =
 encodePoint : Point -> Decode.Value
 encodePoint ( x, y ) =
     Encode.object
-        [ ( "x", Encode.int x )
-        , ( "y", Encode.int y )
+        [ ( "x", Encode.float x )
+        , ( "y", Encode.float y )
         ]
 
 
@@ -226,8 +308,8 @@ pathDecoder =
 pointDecoder : Decoder Point
 pointDecoder =
     Decode.map2 Tuple.pair
-        (Decode.field "x" Decode.int)
-        (Decode.field "y" Decode.int)
+        (Decode.field "x" Decode.float)
+        (Decode.field "y" Decode.float)
 
 
 main : Program Flags Model Msg

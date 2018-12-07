@@ -36,3 +36,6 @@ app.ports.sendPoints.subscribe(function(point) {
 channel.on("new_event", payload => {
   app.ports.incomingPaths.send(payload)
 })
+window.addEventListener('scroll', function() {
+  app.ports.scrollEvents.send({})
+});
