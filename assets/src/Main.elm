@@ -33,16 +33,16 @@ type alias State =
 
 
 type Model
-    = Loading
-    | Recording Path State
+    = Loading (List Path)
     | Stable State
+    | Recording Path State
 
 
 toList : Model -> List Path
 toList model =
     case model of
-        Loading ->
-            []
+        Loading paths ->
+            paths
 
         Recording head state ->
             head :: state.existing
@@ -52,7 +52,7 @@ toList model =
 
 
 type alias Flags =
-    ()
+    Decode.Value
 
 
 drawingSurface : String
@@ -62,7 +62,12 @@ drawingSurface =
 
 initialize : Flags -> ( Model, Cmd Msg )
 initialize flags =
-    ( Loading, fetchSvgCoords )
+    case Decode.decodeValue (Decode.list pathDecoder) flags of
+        Err _ ->
+            ( Loading [], fetchSvgCoords )
+
+        Ok initialPaths ->
+            ( Loading initialPaths, fetchSvgCoords )
 
 
 fetchSvgCoords : Cmd Msg
@@ -83,7 +88,7 @@ svgPathString path =
 startRecording : Uuid -> Model -> Model
 startRecording uuid model =
     case model of
-        Loading ->
+        Loading _ ->
             model
 
         Recording _ _ ->
@@ -96,8 +101,8 @@ startRecording uuid model =
 addForeignPath : Path -> Model -> Model
 addForeignPath path model =
     case model of
-        Loading ->
-            model
+        Loading paths ->
+            Loading (path :: paths)
 
         Recording current state ->
             Recording current (addPath path state)
@@ -114,7 +119,7 @@ addPath path state =
 stopRecording : Model -> Model
 stopRecording model =
     case model of
-        Loading ->
+        Loading _ ->
             model
 
         Recording _ state ->
@@ -127,7 +132,7 @@ stopRecording model =
 addPoint : Point -> Model -> Model
 addPoint point model =
     case model of
-        Loading ->
+        Loading _ ->
             model
 
         Recording current rest ->
@@ -145,8 +150,8 @@ offsetPoint { element, viewport } ( x, y ) =
 addCoords : Browser.Dom.Element -> Model -> Model
 addCoords element model =
     case model of
-        Loading ->
-            Stable { svgElement = element, existing = [] }
+        Loading existing ->
+            Stable { svgElement = element, existing = existing }
 
         Recording current state ->
             Recording current { state | svgElement = element }
@@ -202,7 +207,7 @@ sendBuildingPoints model =
 buildingPoints : Model -> Maybe Path
 buildingPoints model =
     case model of
-        Loading ->
+        Loading _ ->
             Nothing
 
         Recording current _ ->
@@ -232,8 +237,8 @@ view model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
-        Loading ->
-            Sub.none
+        Loading _ ->
+            incomingPaths (RemotePathReceived << Decode.decodeValue pathDecoder)
 
         Recording _ _ ->
             Sub.batch
