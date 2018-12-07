@@ -15,8 +15,8 @@ defmodule Whiteboard do
     Board.Path |> where([p], p.board_id == ^board_id) |> Repo.all()
   end
 
-  def upsert_path(board_id, path_id, points) do
-    changes = %{"board_id" => board_id, "id" => path_id, "points" => points}
+  def upsert_path(board_id, path_id, email, points) do
+    changes = %{"board_id" => board_id, "id" => path_id, "points" => points, "email" => email}
 
     %Board.Path{}
     |> Board.Path.changeset(changes)

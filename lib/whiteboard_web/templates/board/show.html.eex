@@ -4,5 +4,8 @@
 
 <button id="test-button">Test Button</button>
 
-<script>window.boardId = "<%= assigns[:board].id %>";</script>
+<script>
+  window.boardId = "<%= assigns[:board].id %>";
+  window.currentUser = "<%= assigns[:current_user].email %>";
+</script>
 <script type="text/javascript" src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
