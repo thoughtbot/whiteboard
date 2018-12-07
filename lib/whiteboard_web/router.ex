@@ -16,7 +16,8 @@ defmodule WhiteboardWeb.Router do
   scope "/", WhiteboardWeb do
     pipe_through :browser
 
-    get "/", PageController, :index
+    get "/", BoardController, :new
     resources "/boards", BoardController, only: [:show, :create]
+    resources "/sessions", SessionController, only: [:new, :create, :delete]
   end
 end
