@@ -6,7 +6,7 @@ defmodule WhiteboardWeb.Endpoint do
   end
 
   socket "/socket", WhiteboardWeb.UserSocket,
-    websocket: true,
+    websocket: [timeout: 45_000],
     longpoll: false
 
   # Serve at "/" the static files from "priv/static" directory.
