@@ -7,3 +7,30 @@ main.container {
   width: 100%;
   height: 100%;
 }
+
+.gravatar {
+  margin: 2px;
+  border-radius: 100px;
+  width: 50px;
+  height: 50px;
+}
+
+.color-blue {
+  border: 5px solid blue;
+}
+
+.color-green {
+  border: 5px solid green;
+}
+
+.color-orange {
+  border: 5px solid orange;
+}
+
+.color-purple {
+  border: 5px solid purple;
+}
+
+.color-black {
+  border: 5px solid black;
+}

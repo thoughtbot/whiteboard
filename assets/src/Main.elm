@@ -4,11 +4,13 @@ import Browser
 import Browser.Dom
 import Browser.Events
 import Html exposing (..)
-import Html.Attributes exposing (id, style)
+import Html.Attributes exposing (class, id, src, style)
 import Html.Events exposing (onClick, onMouseDown)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
+import MD5
 import Random
+import Set
 import Svg exposing (Svg, polyline)
 import Svg.Attributes exposing (fill, points, stroke, strokeWidth)
 import Task
@@ -22,6 +24,11 @@ type alias Point =
 
 type Email
     = Email String
+
+
+emailToString : Email -> String
+emailToString (Email email) =
+    email
 
 
 type alias Path =
@@ -42,6 +49,20 @@ type Model
     = Loading Email (List Path)
     | Stable State
     | Recording Path State
+
+
+uniqueEmails : List Path -> List Email
+uniqueEmails paths =
+    paths
+        |> List.map (emailToString << .email)
+        |> Set.fromList
+        |> Set.toList
+        |> List.map Email
+
+
+gravatarPath : Email -> String
+gravatarPath (Email email) =
+    "https://www.gravatar.com/avatar/" ++ MD5.hex email
 
 
 toList : Model -> List Path
@@ -260,16 +281,24 @@ viewPath path =
         []
 
 
+gravatar : Email -> Html a
+gravatar email =
+    img [ src (gravatarPath email), class "gravatar", class <| "color-" ++ strokeColorFor email ] []
+
+
 view : Model -> Html Msg
 view model =
-    Svg.svg
-        [ style "position" "absolute"
-        , style "width" "100%"
-        , style "height" "100%"
-        , onMouseDown DrawStarted
-        , id drawingSurface
+    div []
+        [ div [] <| List.map gravatar (uniqueEmails <| toList model)
+        , Svg.svg
+            [ style "position" "absolute"
+            , style "width" "100%"
+            , style "height" "100%"
+            , onMouseDown DrawStarted
+            , id drawingSurface
+            ]
+            (List.map viewPath <| toList model)
         ]
-        (List.map viewPath <| toList model)
 
 
 subscriptions : Model -> Sub Msg
