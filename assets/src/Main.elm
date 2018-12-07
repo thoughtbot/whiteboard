@@ -10,7 +10,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Random
 import Svg exposing (Svg, polyline)
-import Svg.Attributes exposing (fill, points, stroke)
+import Svg.Attributes exposing (fill, points, stroke, strokeWidth)
 import Task
 import Time
 import Uuid exposing (Uuid)
@@ -20,20 +20,26 @@ type alias Point =
     ( Float, Float )
 
 
+type Email
+    = Email String
+
+
 type alias Path =
     { id : Uuid
     , points : List Point
+    , email : Email
     }
 
 
 type alias State =
     { existing : List Path
     , svgElement : Browser.Dom.Element
+    , email : Email
     }
 
 
 type Model
-    = Loading (List Path)
+    = Loading Email (List Path)
     | Stable State
     | Recording Path State
 
@@ -41,7 +47,7 @@ type Model
 toList : Model -> List Path
 toList model =
     case model of
-        Loading paths ->
+        Loading _ paths ->
             paths
 
         Recording head state ->
@@ -60,14 +66,21 @@ drawingSurface =
     "drawing-surface"
 
 
+flagDecoder : Decoder ( Email, List Path )
+flagDecoder =
+    Decode.map2 Tuple.pair
+        (Decode.field "email" emailDecoder)
+        (Decode.field "paths" <| Decode.list pathDecoder)
+
+
 initialize : Flags -> ( Model, Cmd Msg )
 initialize flags =
-    case Decode.decodeValue (Decode.list pathDecoder) flags of
+    case Decode.decodeValue flagDecoder flags of
         Err _ ->
-            ( Loading [], fetchSvgCoords )
+            ( Loading (Email "i failed") [], fetchSvgCoords )
 
-        Ok initialPaths ->
-            ( Loading initialPaths, fetchSvgCoords )
+        Ok ( email, initialPaths ) ->
+            ( Loading email initialPaths, fetchSvgCoords )
 
 
 fetchSvgCoords : Cmd Msg
@@ -88,21 +101,21 @@ svgPathString path =
 startRecording : Uuid -> Model -> Model
 startRecording uuid model =
     case model of
-        Loading _ ->
+        Loading _ _ ->
             model
 
         Recording _ _ ->
             model
 
-        Stable paths ->
-            Recording { id = uuid, points = [] } paths
+        Stable state ->
+            Recording { email = state.email, id = uuid, points = [] } state
 
 
 addForeignPath : Path -> Model -> Model
 addForeignPath path model =
     case model of
-        Loading paths ->
-            Loading (path :: paths)
+        Loading email paths ->
+            Loading email (path :: paths)
 
         Recording current state ->
             Recording current (addPath path state)
@@ -119,7 +132,7 @@ addPath path state =
 stopRecording : Model -> Model
 stopRecording model =
     case model of
-        Loading _ ->
+        Loading _ _ ->
             model
 
         Recording _ state ->
@@ -132,7 +145,7 @@ stopRecording model =
 addPoint : Point -> Model -> Model
 addPoint point model =
     case model of
-        Loading _ ->
+        Loading _ _ ->
             model
 
         Recording current rest ->
@@ -150,8 +163,8 @@ offsetPoint { element, viewport } ( x, y ) =
 addCoords : Browser.Dom.Element -> Model -> Model
 addCoords element model =
     case model of
-        Loading existing ->
-            Stable { svgElement = element, existing = existing }
+        Loading email existing ->
+            Stable { email = email, svgElement = element, existing = existing }
 
         Recording current state ->
             Recording current { state | svgElement = element }
@@ -207,7 +220,7 @@ sendBuildingPoints model =
 buildingPoints : Model -> Maybe Path
 buildingPoints model =
     case model of
-        Loading _ ->
+        Loading _ _ ->
             Nothing
 
         Recording current _ ->
@@ -217,9 +230,34 @@ buildingPoints model =
             Nothing
 
 
+strokeColorFor : Email -> String
+strokeColorFor (Email email) =
+    case email of
+        "joelq@thoughtbot.com" ->
+            "purple"
+
+        "alex@thoughtbot.com" ->
+            "blue"
+
+        "german@thoughtbot.com" ->
+            "green"
+
+        "chris@thoughtbot.com" ->
+            "orange"
+
+        _ ->
+            "black"
+
+
 viewPath : Path -> Svg a
 viewPath path =
-    polyline [ points (svgPathString path), fill "none", stroke "black" ] []
+    polyline
+        [ points (svgPathString path)
+        , fill "none"
+        , stroke (strokeColorFor path.email)
+        , strokeWidth "10px"
+        ]
+        []
 
 
 view : Model -> Html Msg
@@ -237,7 +275,7 @@ view model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
-        Loading _ ->
+        Loading _ _ ->
             incomingPaths (RemotePathReceived << Decode.decodeValue pathDecoder)
 
         Recording _ _ ->
@@ -305,9 +343,15 @@ encodePoint ( x, y ) =
 
 pathDecoder : Decoder Path
 pathDecoder =
-    Decode.map2 (\id points -> { id = id, points = points })
+    Decode.map3 Path
         (Decode.field "id" Uuid.decoder)
         (Decode.field "points" (Decode.list pointDecoder))
+        (Decode.field "email" emailDecoder)
+
+
+emailDecoder : Decoder Email
+emailDecoder =
+    Decode.map Email Decode.string
 
 
 pointDecoder : Decoder Point

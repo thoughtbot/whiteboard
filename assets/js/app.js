@@ -26,7 +26,7 @@ channel.join()
     console.log("Joined successfully", resp)
     var app = Elm.Main.init({
         node: document.getElementById('elm-main'),
-        flags: resp
+        flags: { email: window.currentUser, paths: resp }
     });
 
     app.ports.sendPoints.subscribe(function(point) {
