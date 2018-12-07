@@ -8,12 +8,8 @@ defmodule Whiteboard.Application do
   def start(_type, _args) do
     # List all child processes to be supervised
     children = [
-      # Start the Ecto repository
       Whiteboard.Repo,
-      # Start the endpoint when the application starts
       WhiteboardWeb.Endpoint
-      # Starts a worker by calling: Whiteboard.Worker.start_link(arg)
-      # {Whiteboard.Worker, arg},
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
