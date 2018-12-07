@@ -15,7 +15,7 @@ import "phoenix_html"
 //
 // Local files can be imported directly using relative paths, for example:
 import {Socket} from "phoenix"
-let socket = new Socket("/socket", {params: {}})
+let socket = new Socket("/socket", {params: {email: window.currentUser}})
 socket.connect()
 
 let channel = socket.channel(`board:${window.boardId}`, {})

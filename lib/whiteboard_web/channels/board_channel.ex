@@ -8,11 +8,16 @@ defmodule WhiteboardWeb.BoardChannel do
   end
 
   def handle_in("new_event", payload, socket) do
-    broadcast_from!(socket, "new_event", payload)
+    email = socket.assigns.email
+    board_id = socket.assigns.board_id
 
-    %{"id" => path_id, "points" => points} = payload
+    new_payload = Map.put(payload, :email, email)
 
-    Whiteboard.upsert_path(socket.assigns.board_id, path_id, points)
+    broadcast_from!(socket, "new_event", new_payload)
+
+    %{"id" => path_id, "points" => points} = new_payload
+
+    Whiteboard.upsert_path(board_id, path_id, email, points)
 
     {:noreply, socket}
   end
