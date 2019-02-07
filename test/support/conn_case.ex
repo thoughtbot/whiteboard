@@ -24,6 +24,7 @@ defmodule WhiteboardWeb.ConnCase do
       # The default endpoint for testing
       @endpoint WhiteboardWeb.Endpoint
       import Whiteboard.Factory
+      import WhiteboardWeb.ConnCase.Helpers
     end
   end
 
@@ -35,5 +36,15 @@ defmodule WhiteboardWeb.ConnCase do
     end
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
+  end
+
+  defmodule Helpers do
+    alias Whiteboard.Session
+
+    def sign_in(conn) do
+      conn
+      |> Plug.Test.init_test_session([])
+      |> Session.sign_in(as: "sample_email@example.com")
+    end
   end
 end

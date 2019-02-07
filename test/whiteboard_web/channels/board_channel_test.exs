@@ -1,16 +1,17 @@
 defmodule WhiteboardWeb.BoardChannelTest do
   use WhiteboardWeb.ChannelCase
 
-  alias Whiteboard.Board.Path
-  alias Whiteboard.Repo
+  import Whiteboard.Factory
+
   alias WhiteboardWeb.BoardChannel
 
   describe "new_event" do
     test "broadcast new even to all participants" do
       payload = %{"id" => Ecto.UUID.generate(), "points" => [%{x: 1, y: 2}]}
+      board = insert_board()
 
-      "random board"
-      |> join_channel()
+      board.id
+      |> join_channel(as: "sample@example.com")
       |> send_new_event(payload)
 
       assert_broadcast("new_event", payload)
@@ -21,9 +22,9 @@ defmodule WhiteboardWeb.BoardChannelTest do
     push(socket, "new_event", payload)
   end
 
-  defp join_channel(board_name) do
+  defp join_channel(board_id, as: email) do
     WhiteboardWeb.UserSocket
-    |> socket("user_id", %{})
-    |> subscribe_and_join(BoardChannel, "board:" <> board_name)
+    |> socket("user_id", %{email: email})
+    |> subscribe_and_join(BoardChannel, "board:" <> board_id)
   end
 end

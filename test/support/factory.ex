@@ -4,9 +4,9 @@ defmodule Whiteboard.Factory do
     board
   end
 
-  def insert_path(board, points) do
+  def insert_path(board, points, email) do
     path_id = Ecto.UUID.generate()
-    {:ok, path} = Whiteboard.upsert_path(board.id, path_id, points)
+    {:ok, path} = Whiteboard.upsert_path(board.id, path_id, email, points)
     path
   end
 end

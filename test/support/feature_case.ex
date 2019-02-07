@@ -11,6 +11,7 @@ defmodule WhiteboardWeb.FeatureCase do
       import Ecto.Query
 
       import WhiteboardWeb.Router.Helpers
+      import WhiteboardWeb.FeatureCase.Helpers
     end
   end
 
@@ -24,5 +25,19 @@ defmodule WhiteboardWeb.FeatureCase do
     metadata = Phoenix.Ecto.SQL.Sandbox.metadata_for(Whiteboard.Repo, self())
     {:ok, session} = Wallaby.start_session(metadata: metadata)
     {:ok, session: session}
+  end
+
+  defmodule Helpers do
+    use Wallaby.DSL
+
+    import Wallaby.Query, only: [text_field: 1, button: 1]
+
+    @sample_email "sample@example.com"
+
+    def sign_in(session) do
+      session
+      |> fill_in(text_field("Email"), with: @sample_email)
+      |> click(button("Sign in"))
+    end
   end
 end
