@@ -1,5 +1,5 @@
 defmodule WhiteboardWeb.UserCreatesABoardTest do
-  use WhiteboardWeb.FeatureCase, async: true
+  use WhiteboardWeb.FeatureCase, async: false
 
   import Wallaby.Query, only: [css: 2, text_field: 1, button: 1]
 
@@ -8,6 +8,7 @@ defmodule WhiteboardWeb.UserCreatesABoardTest do
 
     session
     |> visit("/")
+    |> sign_in()
     |> fill_in(text_field("Board"), with: name)
     |> click(button("Submit"))
     |> assert_has(css(".board-name", text: name))

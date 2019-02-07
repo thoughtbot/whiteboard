@@ -22,8 +22,9 @@ defmodule WhiteboardTest do
       board = insert_board()
       path_id = Ecto.UUID.generate()
       points = [%{"x" => 1, "y" => 2}]
+      email = "sample@example.com"
 
-      {:ok, path} = Whiteboard.upsert_path(board.id, path_id, points)
+      {:ok, path} = Whiteboard.upsert_path(board.id, path_id, email, points)
 
       assert path.points == points
       assert path.board_id == board.id
@@ -33,11 +34,12 @@ defmodule WhiteboardTest do
     test "updates path if it exists" do
       board = insert_board()
       points = [%{"x" => 1, "y" => 2}]
-      path = insert_path(board, points)
+      email = "sample@example.com"
+      path = insert_path(board, points, email)
 
       new_points = [%{"x" => 3, "y" => 4}]
 
-      {:ok, path} = Whiteboard.upsert_path(board.id, path.id, new_points)
+      {:ok, path} = Whiteboard.upsert_path(board.id, path.id, email, new_points)
 
       assert path.points == new_points
       assert path.board_id == board.id
