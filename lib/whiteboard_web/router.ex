@@ -18,6 +18,8 @@ defmodule WhiteboardWeb.Router do
     pipe_through :browser
 
     get "/", BoardController, :new
+    get "/auth/callback", AuthController, :callback
+    resources "/auth", AuthController, only: [:index]
     resources "/boards", BoardController, only: [:show, :create]
     resources "/sessions", SessionController, only: [:new, :create, :delete]
   end

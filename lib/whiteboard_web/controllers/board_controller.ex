@@ -31,7 +31,7 @@ defmodule WhiteboardWeb.BoardController do
     else
       conn
       |> Session.save_return_to(conn.request_path)
-      |> redirect(to: Routes.session_path(conn, :new))
+      |> redirect(to: Routes.auth_path(conn, :index))
       |> halt()
     end
   end

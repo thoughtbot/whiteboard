@@ -30,14 +30,11 @@ defmodule WhiteboardWeb.FeatureCase do
   defmodule Helpers do
     use Wallaby.DSL
 
-    import Wallaby.Query, only: [text_field: 1, button: 1]
-
-    @sample_email "sample@example.com"
+    import Wallaby.Query, only: [link: 1]
 
     def sign_in(session) do
       session
-      |> fill_in(text_field("Email"), with: @sample_email)
-      |> click(button("Sign in"))
+      |> click(link("Sign in with Google"))
     end
   end
 end

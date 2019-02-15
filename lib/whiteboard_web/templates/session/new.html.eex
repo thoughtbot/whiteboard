@@ -1,7 +1,5 @@
 <div>
-  <%= form_for @conn, Routes.session_path(@conn, :create), fn f -> %>
-    <p>Please sign in before you can draw on our whiteboards!</p>
-    <label>Email <%= text_input f, :email %></label>
-    <%= submit "Sign in" %>
+  <%= link to: Routes.auth_path(@conn, :index) do %>
+    <%= gettext "Sign in with Google" %>
   <% end %>
 </div>
