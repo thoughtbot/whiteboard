@@ -30,7 +30,7 @@ defmodule Whiteboard.GoogleAuth do
     |> OAuth2.Client.get_token!([code: code], [{"Accept", "application/json"}])
   end
 
-  def get_userinfo!(token) do
+  def get_user_info!(token) do
     OAuth2.Client.get!(token, "/oauth2/v1/userinfo?alt=json").body
   end
 end

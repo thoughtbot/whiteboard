@@ -17,7 +17,7 @@ defmodule WhiteboardWeb.Router do
   scope "/", WhiteboardWeb do
     pipe_through :browser
 
-    get "/", BoardController, :new
+    get "/", BoardController, :new, as: :board
     get "/auth/callback", AuthController, :callback
     resources "/auth", AuthController, only: [:index]
     resources "/boards", BoardController, only: [:show, :create]
