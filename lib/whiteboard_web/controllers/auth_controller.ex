@@ -1,20 +1,21 @@
 defmodule WhiteboardWeb.AuthController do
   use WhiteboardWeb, :controller
 
-  alias Whiteboard.Auth
-
   require Logger
 
   def index(conn, _params) do
+    auth_module = Application.get_env(:whiteboard, :auth_module)
     redirect_url = Routes.auth_url(conn, :callback)
 
     conn
-    |> redirect(external: Auth.authorize_url!(redirect_url))
+    |> redirect(external: auth_module.authorize_url!(redirect_url))
   end
 
   def callback(conn, %{"code" => code}) do
+    auth_module = Application.get_env(:whiteboard, :auth_module)
     redirect_url = Routes.auth_url(conn, :callback)
-    token = Auth.get_token!(code, redirect_url)
+    token = auth_module.get_token!(code, redirect_url)
+    %{"email" => email, "name" => name} = auth_module.get_userinfo!(token)
 
     conn
     |> redirect(external: Routes.session_path(conn, :new))

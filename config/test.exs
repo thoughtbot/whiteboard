@@ -18,3 +18,9 @@ config :whiteboard, Whiteboard.Repo,
   database: "whiteboard_test",
   hostname: "localhost",
   pool: Ecto.Adapters.SQL.Sandbox
+
+config :whiteboard,
+  auth_client_id: "auth_client_id",
+  auth_client_secret: "auth_client_secret",
+  auth_redirect_uri: "localhost:4000",
+  auth_module: Whiteboard.AuthMock

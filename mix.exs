@@ -44,7 +44,8 @@ defmodule Whiteboard.MixProject do
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
       {:wallaby, "~> 0.21", runtime: false, only: :test},
-      {:oauth2, "~> 0.9"}
+      {:oauth2, "~> 0.9"},
+      {:mox, "~> 0.5", only: :test}
     ]
   end
 
