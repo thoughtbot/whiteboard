@@ -1,6 +1,10 @@
 defmodule Whiteboard.Session do
   import Plug.Conn
 
+  @one_year_in_seconds 365 * 24 * 60 * 60
+  @one_week 86400 * 7
+  @salt "user_id"
+
   def sign_in(conn, as: email) do
     user = Whiteboard.User.new(email)
     put_session(conn, :current_user, user)
@@ -31,5 +35,14 @@ defmodule Whiteboard.Session do
 
   def guest_user do
     Whiteboard.User.new("guest")
+  end 
+
+  def sign_user_id(conn, user_id) do
+    signed_user_id = Phoenix.Token.sign(conn, @salt, user_id)
+    conn |> Plug.Conn.put_resp_cookie("user_id", signed_user_id, max_age: @one_year_in_seconds)
+  end
+
+  def verify_signed_user_id(conn) do
+    Phoenix.Token.verify(conn, @salt, conn.cookies["user_id"], max_age: @one_week)
   end
 end

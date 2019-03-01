@@ -1,6 +1,8 @@
 defmodule WhiteboardWeb.Router do
   use WhiteboardWeb, :router
 
+  alias Whiteboard.{Repo, User, Session}
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -25,12 +27,10 @@ defmodule WhiteboardWeb.Router do
   end
 
   def assign_current_user(conn, _) do
-    user =
-      if Whiteboard.Session.signed_in?(conn) do
-        Whiteboard.Session.current_user(conn)
-      else
-        Whiteboard.Session.guest_user()
-      end
+    user = case Session.verify_signed_user_id(conn) do
+      {:ok, user_id} -> Repo.get(User, user_id)
+      {:error, _} -> :not_signed_in
+    end
 
     assign(conn, :current_user, user)
   end
